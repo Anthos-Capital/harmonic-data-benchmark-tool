@@ -15,7 +15,8 @@ import {
 
 export default function Index() {
   const [steps, setSteps] = useState<StatusMessage[]>([]);
-  const [pbMeta, setPbMeta] = useState<CompanyMeta>();
+const [pbMeta, setPbMeta] = useState<CompanyMeta>();
+  const [hMeta, setHMeta] = useState<CompanyMeta>();
   const [pbRounds, setPbRounds] = useState<FundingRound[]>([]);
   const [hRounds, setHRounds] = useState<FundingRound[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,7 @@ export default function Index() {
     setLoading(true);
     setSteps([]);
     setPbMeta(undefined);
+    setHMeta(undefined);
     setPbRounds([]);
     setHRounds([]);
 
@@ -64,7 +66,7 @@ export default function Index() {
           pbFunding.push({
             date: detail.dealDate ?? d.dealDate ?? "",
             type: decodeDealType(detail.dealType ?? d.dealType ?? ""),
-            amount: detail.dealSize ?? d.dealSize ?? null,
+            amount: (typeof (detail.dealSize ?? d.dealSize) === "object" ? (detail.dealSize ?? d.dealSize)?.amount : (detail.dealSize ?? d.dealSize)) ?? null,
             currency: "USD",
             investors: (detail.investors ?? []).map((inv: { investorName: string }) => inv.investorName),
             source: "pitchbook",
@@ -73,7 +75,7 @@ export default function Index() {
           pbFunding.push({
             date: d.dealDate ?? "",
             type: decodeDealType(d.dealType ?? ""),
-            amount: d.dealSize ?? null,
+            amount: (typeof d.dealSize === "object" ? d.dealSize?.amount : d.dealSize) ?? null,
             currency: "USD",
             investors: [],
             source: "pitchbook",
@@ -95,6 +97,14 @@ export default function Index() {
             updateStep("Harmonic Search", "done");
             updateStep("Harmonic Company", "loading");
             const hCompany = await fetchHarmonicCompany(String(hId));
+            const hCompanyMeta: CompanyMeta = {
+              name: hCompany.name ?? "",
+              website: hCompany.website?.url ?? hCompany.website_url ?? hCompany.domain,
+              description: hCompany.description,
+              hq: [hCompany.location?.city, hCompany.location?.state, hCompany.location?.country].filter(Boolean).join(", ") || hCompany.location_str,
+              founded: hCompany.founded_date ?? hCompany.year_founded,
+            };
+            setHMeta(hCompanyMeta);
             const funding = hCompany.funding_rounds ?? hCompany.fundings ?? [];
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const harmonicRounds: FundingRound[] = funding.map((f: any) => ({
@@ -133,7 +143,7 @@ export default function Index() {
 
       <SearchBar onSearch={run} loading={loading} />
       <StatusBar steps={steps} />
-      <CompanyHeader pb={pbMeta} />
+      <CompanyHeader pb={pbMeta} harmonic={hMeta} />
       {(pbRounds.length > 0 || hRounds.length > 0) && (
         <ComparisonTable pbRounds={pbRounds} harmonicRounds={hRounds} />
       )}
