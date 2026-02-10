@@ -58,7 +58,7 @@ serve(async (req) => {
         }
         case "pb_deal_details": {
           // pbId here is the dealId
-          data = await fetchJSON(`${PB_BASE}/deals/${pbId}`, pbHeaders(apiKey));
+          data = await fetchJSON(`${PB_BASE}/deals/${pbId}/detailed`, pbHeaders(apiKey));
           break;
         }
         default:
@@ -82,8 +82,7 @@ serve(async (req) => {
             method: "POST",
             headers: harmonicHeaders(apiKey),
             body: JSON.stringify({
-              filter: { website: { value: domain, operator: "equals" } },
-              size: 1,
+              query: domain,
             }),
           });
           const body = await res.text();

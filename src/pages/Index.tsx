@@ -44,7 +44,7 @@ export default function Index() {
       updateStep("PB Company", "loading");
       const company = await fetchPBCompany(pbId, useSandbox);
       const meta: CompanyMeta = {
-        name: company.companyName ?? company.name ?? pbId,
+        name: (typeof company.companyName === "object" ? company.companyName?.formalName : company.companyName) ?? company.name ?? pbId,
         website: company.website,
         description: company.description,
         hq: [company.city, company.state, company.country].filter(Boolean).join(", "),
