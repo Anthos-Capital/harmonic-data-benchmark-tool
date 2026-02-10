@@ -15,8 +15,10 @@ import {
 
 export default function Index() {
   const [steps, setSteps] = useState<StatusMessage[]>([]);
-const [pbMeta, setPbMeta] = useState<CompanyMeta>();
+  const [pbMeta, setPbMeta] = useState<CompanyMeta>();
   const [hMeta, setHMeta] = useState<CompanyMeta>();
+  const [currentPbId, setCurrentPbId] = useState<string>();
+  const [currentHId, setCurrentHId] = useState<string>();
   const [pbRounds, setPbRounds] = useState<FundingRound[]>([]);
   const [hRounds, setHRounds] = useState<FundingRound[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,8 @@ const [pbMeta, setPbMeta] = useState<CompanyMeta>();
     setSteps([]);
     setPbMeta(undefined);
     setHMeta(undefined);
+    setCurrentPbId(pbId);
+    setCurrentHId(undefined);
     setPbRounds([]);
     setHRounds([]);
 
@@ -94,6 +98,7 @@ const [pbMeta, setPbMeta] = useState<CompanyMeta>();
           const results = searchRes.results ?? searchRes.data ?? [];
           if (results.length > 0) {
             const hId = results[0].id ?? results[0].entity_id;
+            setCurrentHId(String(hId));
             updateStep("Harmonic Search", "done");
             updateStep("Harmonic Company", "loading");
             const hCompany = await fetchHarmonicCompany(String(hId));
@@ -143,7 +148,7 @@ const [pbMeta, setPbMeta] = useState<CompanyMeta>();
 
       <SearchBar onSearch={run} loading={loading} />
       <StatusBar steps={steps} />
-      <CompanyHeader pb={pbMeta} harmonic={hMeta} />
+      <CompanyHeader pb={pbMeta} harmonic={hMeta} pbId={currentPbId} harmonicId={currentHId} />
       {(pbRounds.length > 0 || hRounds.length > 0) && (
         <ComparisonTable pbRounds={pbRounds} harmonicRounds={hRounds} />
       )}
