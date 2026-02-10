@@ -78,16 +78,15 @@ serve(async (req) => {
       let data: unknown;
       switch (action) {
         case "h_search": {
-          const res = await fetch(`${HARMONIC_BASE}/search/companies`, {
+          const url = `${HARMONIC_BASE}/companies?website_domain=${encodeURIComponent(domain)}`;
+          const res = await fetch(url, {
             method: "POST",
             headers: harmonicHeaders(apiKey),
-            body: JSON.stringify({
-              query: domain,
-            }),
           });
           const body = await res.text();
           if (!res.ok) throw new Error(`Harmonic search failed [${res.status}]: ${body}`);
-          data = JSON.parse(body);
+          // The response is the company object directly
+          data = { results: [JSON.parse(body)] };
           break;
         }
         case "h_company": {
