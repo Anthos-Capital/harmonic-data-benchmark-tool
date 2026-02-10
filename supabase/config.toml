@@ -1,0 +1,4 @@
+project_id = "aqfnbqkmnotndikqoits"
+
+[functions.benchmark-proxy]
+verify_jwt = false
