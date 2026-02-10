@@ -110,18 +110,35 @@ export default function Index() {
               founded: hCompany.founded_date ?? hCompany.year_founded,
             };
             setHMeta(hCompanyMeta);
-            const funding = hCompany.funding_rounds ?? hCompany.fundings ?? [];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const harmonicRounds: FundingRound[] = funding.map((f: any) => ({
-              date: (f.announced_date ?? f.date ?? "") as string,
-              type: (f.funding_type ?? f.series ?? f.round_type ?? "") as string,
-              amount: (f.money_raised?.amount ?? f.amount ?? null) as number | null,
-              currency: "USD",
-              investors: ((f.investors ?? []) as Array<Record<string, string>>).map(
-                (inv) => inv.name ?? inv.investor_name ?? ""
-              ),
-              source: "harmonic" as const,
-            }));
+            const fundingRoundsArr = hCompany.funding_rounds ?? hCompany.fundings ?? [];
+            let harmonicRounds: FundingRound[] = [];
+
+            if (fundingRoundsArr.length > 0) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              harmonicRounds = fundingRoundsArr.map((f: any) => ({
+                date: (f.announced_date ?? f.date ?? "") as string,
+                type: (f.funding_type ?? f.series ?? f.round_type ?? "") as string,
+                amount: (f.money_raised?.amount ?? f.amount ?? null) as number | null,
+                currency: "USD",
+                investors: ((f.investors ?? []) as Array<Record<string, string>>).map(
+                  (inv) => inv.name ?? inv.investor_name ?? ""
+                ),
+                source: "harmonic" as const,
+              }));
+            } else if (hCompany.funding && hCompany.funding.num_funding_rounds > 0) {
+              // Fallback: construct round(s) from the funding summary object
+              harmonicRounds = [{
+                date: hCompany.funding.last_funding_at ?? "",
+                type: hCompany.funding.last_funding_type ?? "",
+                amount: hCompany.funding.last_funding_total ?? hCompany.funding.funding_total ?? null,
+                currency: "USD",
+                investors: (hCompany.funding.investors ?? []).map(
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (inv: any) => inv.name ?? ""
+                ),
+                source: "harmonic" as const,
+              }];
+            }
             setHRounds(harmonicRounds);
             updateStep("Harmonic Company", "done", `${harmonicRounds.length} rounds`);
           } else {
