@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PB_BASE = "https://api.pitchbook.com/v1";
+const PB_BASE = "https://api.pitchbook.com";
 const HARMONIC_BASE = "https://api.harmonic.ai";
 
 function pbHeaders(apiKey: string) {
@@ -49,7 +49,7 @@ serve(async (req) => {
       let data: unknown;
       switch (action) {
         case "pb_company": {
-          data = await fetchJSON(`${PB_BASE}/companies/${pbId}`, pbHeaders(apiKey));
+          data = await fetchJSON(`${PB_BASE}/companies/${pbId}/bio`, pbHeaders(apiKey));
           break;
         }
         case "pb_deals": {
