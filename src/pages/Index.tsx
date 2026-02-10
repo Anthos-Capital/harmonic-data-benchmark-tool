@@ -102,12 +102,14 @@ export default function Index() {
             updateStep("Harmonic Search", "done");
             updateStep("Harmonic Company", "loading");
             const hCompany = await fetchHarmonicCompany(String(hId));
+            const foundedRaw = hCompany.founding_date?.date ?? hCompany.founded_date ?? hCompany.year_founded;
+            const foundedStr = foundedRaw ? (typeof foundedRaw === "string" && foundedRaw.length > 4 ? new Date(foundedRaw).getFullYear().toString() : String(foundedRaw)) : undefined;
             const hCompanyMeta: CompanyMeta = {
               name: hCompany.name ?? "",
               website: hCompany.website?.url ?? hCompany.website_url ?? hCompany.domain,
               description: hCompany.description,
               hq: [hCompany.location?.city, hCompany.location?.state, hCompany.location?.country].filter(Boolean).join(", ") || hCompany.location_str,
-              founded: hCompany.founded_date ?? hCompany.year_founded,
+              founded: foundedStr,
             };
             setHMeta(hCompanyMeta);
             const fundingRoundsArr = hCompany.funding_rounds ?? hCompany.fundings ?? [];
