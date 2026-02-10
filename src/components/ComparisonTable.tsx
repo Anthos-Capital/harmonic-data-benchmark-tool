@@ -7,6 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import pbLogo from "@/assets/pitchbook-logo.png";
+import hLogo from "@/assets/harmonic-logo.png";
 
 interface Props {
   pbRounds: FundingRound[];
@@ -69,12 +71,26 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
       <Table>
         <TableHeader>
           <TableRow className="text-xs">
-            <TableHead className="w-28">PB Date</TableHead>
-            <TableHead>PB Type</TableHead>
-            <TableHead className="text-right">PB Amount</TableHead>
-            <TableHead className="w-28">H Date</TableHead>
-            <TableHead>H Type</TableHead>
-            <TableHead className="text-right">H Amount</TableHead>
+            <TableHead colSpan={3} className="border-r border-border">
+              <span className="inline-flex items-center gap-1.5">
+                <img src={pbLogo} alt="PitchBook" className="h-4 w-4" />
+                PitchBook
+              </span>
+            </TableHead>
+            <TableHead colSpan={3}>
+              <span className="inline-flex items-center gap-1.5">
+                <img src={hLogo} alt="Harmonic" className="h-4 w-4" />
+                Harmonic
+              </span>
+            </TableHead>
+          </TableRow>
+          <TableRow className="text-xs">
+            <TableHead className="w-28">Date</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right border-r border-border">Amount</TableHead>
+            <TableHead className="w-28">Date</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,7 +100,7 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
               <TableCell className={diffClass(r.pb?.type, r.h?.type)}>
                 {r.pb?.type ?? "—"}
               </TableCell>
-              <TableCell className={`text-right ${diffClass(r.pb?.amount, r.h?.amount)}`}>
+              <TableCell className={`text-right border-r border-border ${diffClass(r.pb?.amount, r.h?.amount)}`}>
                 {fmt(r.pb?.amount ?? null)}
               </TableCell>
               <TableCell>{r.h?.date ?? "—"}</TableCell>

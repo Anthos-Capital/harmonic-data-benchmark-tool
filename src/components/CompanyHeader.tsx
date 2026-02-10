@@ -1,9 +1,13 @@
 import type { CompanyMeta } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
+import { ExternalLink } from "lucide-react";
+import pbLogo from "@/assets/pitchbook-logo.png";
+import hLogo from "@/assets/harmonic-logo.png";
 
 interface Props {
   pb?: CompanyMeta;
   harmonic?: CompanyMeta;
+  pbId?: string;
+  harmonicId?: string;
 }
 
 function MetaRow({ label, pbVal, hVal }: { label: string; pbVal?: string; hVal?: string }) {
@@ -22,9 +26,12 @@ function MetaRow({ label, pbVal, hVal }: { label: string; pbVal?: string; hVal?:
   );
 }
 
-export default function CompanyHeader({ pb, harmonic }: Props) {
+export default function CompanyHeader({ pb, harmonic, pbId, harmonicId }: Props) {
   const name = pb?.name || harmonic?.name;
   if (!name) return null;
+
+  const pbUrl = pbId ? `https://my.pitchbook.com/profile/${pbId}/company/profile` : undefined;
+  const hUrl = harmonicId ? `https://console.harmonic.ai/dashboard/company/${harmonicId}` : undefined;
 
   return (
     <div className="space-y-3">
@@ -36,10 +43,26 @@ export default function CompanyHeader({ pb, harmonic }: Props) {
             <tr className="border-b text-xs text-muted-foreground">
               <th className="text-left px-0 pr-4 py-2 font-medium">Field</th>
               <th className="text-left pr-4 py-2 font-medium">
-                <Badge variant="outline" className="text-[10px] font-normal">PitchBook</Badge>
+                <span className="inline-flex items-center gap-1.5">
+                  <img src={pbLogo} alt="PitchBook" className="h-4 w-4" />
+                  PitchBook
+                  {pbUrl && (
+                    <a href={pbUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </span>
               </th>
               <th className="text-left py-2 font-medium">
-                <Badge variant="outline" className="text-[10px] font-normal">Harmonic</Badge>
+                <span className="inline-flex items-center gap-1.5">
+                  <img src={hLogo} alt="Harmonic" className="h-4 w-4" />
+                  Harmonic
+                  {hUrl && (
+                    <a href={hUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </span>
               </th>
             </tr>
           </thead>
@@ -56,13 +79,17 @@ export default function CompanyHeader({ pb, harmonic }: Props) {
         <div className="space-y-2">
           {pb?.description && (
             <div>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">PB Bio</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider inline-flex items-center gap-1">
+                <img src={pbLogo} alt="" className="h-3 w-3" /> PB Bio
+              </span>
               <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">{pb.description}</p>
             </div>
           )}
           {harmonic?.description && (
             <div>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Harmonic Bio</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider inline-flex items-center gap-1">
+                <img src={hLogo} alt="" className="h-3 w-3" /> Harmonic Bio
+              </span>
               <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">{harmonic.description}</p>
             </div>
           )}
