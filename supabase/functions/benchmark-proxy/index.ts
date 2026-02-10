@@ -94,6 +94,13 @@ serve(async (req) => {
             `${HARMONIC_BASE}/companies/${harmonicId}`,
             harmonicHeaders(apiKey)
           );
+          // Log funding-related keys for debugging
+          const d = data as Record<string, unknown>;
+          const fundingKeys = Object.keys(d).filter(k => k.toLowerCase().includes("fund"));
+          console.log("Harmonic company keys with 'fund':", fundingKeys);
+          console.log("funding_rounds length:", Array.isArray(d.funding_rounds) ? (d.funding_rounds as unknown[]).length : "not array");
+          console.log("funding length:", Array.isArray(d.funding) ? (d.funding as unknown[]).length : "not array");
+          console.log("fundings length:", Array.isArray(d.fundings) ? (d.fundings as unknown[]).length : "not array");
           break;
         }
         default:
