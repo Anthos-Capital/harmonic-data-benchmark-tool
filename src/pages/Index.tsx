@@ -118,12 +118,12 @@ export default function Index() {
             if (fundingRoundsArr.length > 0) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               harmonicRounds = fundingRoundsArr.map((f: any) => ({
-                date: (f.announced_date ?? f.date ?? "") as string,
-                type: (f.funding_type ?? f.series ?? f.round_type ?? "") as string,
-                amount: (f.money_raised?.amount ?? f.amount ?? null) as number | null,
-                currency: "USD",
+                date: (f.announcement_date ?? f.announced_date ?? f.date ?? "") as string,
+                type: (f.funding_round_type ?? f.funding_type ?? f.series ?? "") as string,
+                amount: (f.funding_amount ?? f.money_raised?.amount ?? f.amount ?? null) as number | null,
+                currency: (f.funding_currency ?? "USD") as string,
                 investors: ((f.investors ?? []) as Array<Record<string, string>>).map(
-                  (inv) => inv.name ?? inv.investor_name ?? ""
+                  (inv) => inv.investor_name ?? inv.name ?? ""
                 ),
                 source: "harmonic" as const,
               }));
