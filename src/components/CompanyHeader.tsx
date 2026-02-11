@@ -71,6 +71,7 @@ export default function CompanyHeader({ pb, harmonic, pbId, harmonicId }: Props)
             <MetaRow label="Website" pbVal={pb?.website} hVal={harmonic?.website} />
             <MetaRow label="HQ" pbVal={pb?.hq} hVal={harmonic?.hq} />
             <MetaRow label="Founded" pbVal={pb?.founded} hVal={harmonic?.founded} />
+            <MetaRow label="ID" pbVal={pbId} hVal={harmonicId} />
           </tbody>
         </table>
       </div>
