@@ -1,19 +1,12 @@
+import { useState } from "react";
 import type { FundingRound } from "@/lib/types";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import pbLogo from "@/assets/pitchbook-logo.png";
 import hLogo from "@/assets/harmonic-logo.png";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 interface Props {
   pbRounds: FundingRound[];
   harmonicRounds: FundingRound[];
-  /** Filter out Harmonic rounds with $0 amounts */
   filterZeroAmounts?: boolean;
 }
 
@@ -25,61 +18,13 @@ function fmt(amount: number | null): string {
   return `$${amount.toLocaleString()}`;
 }
 
-/** Normalize any date string to YYYY-MM-DD */
 function normalizeDate(raw: string): string {
   if (!raw) return "";
-  // Handle ISO dates like "2025-03-31T00:00:00Z"
   const d = new Date(raw);
-  if (!isNaN(d.getTime())) {
-    return d.toISOString().slice(0, 10);
-  }
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return raw;
 }
 
-function matchRounds(pb: FundingRound[], h: FundingRound[]) {
-  // Normalize all dates first
-  const normPb = pb.map(r => ({ ...r, date: normalizeDate(r.date) }));
-  const normH = h.map(r => ({ ...r, date: normalizeDate(r.date) }));
-
-  const used = new Set<number>();
-  const rows: { pb?: FundingRound; h?: FundingRound }[] = [];
-
-  for (const p of normPb) {
-    let best = -1;
-    let bestDiff = Infinity;
-    const pDate = new Date(p.date).getTime();
-    normH.forEach((hr, i) => {
-      if (used.has(i)) return;
-      const diff = Math.abs(new Date(hr.date).getTime() - pDate);
-      if (diff < bestDiff && diff < 90 * 86400000) {
-        bestDiff = diff;
-        best = i;
-      }
-    });
-    if (best >= 0) {
-      used.add(best);
-      rows.push({ pb: p, h: normH[best] });
-    } else {
-      rows.push({ pb: p });
-    }
-  }
-  normH.forEach((hr, i) => {
-    if (!used.has(i)) rows.push({ h: hr });
-  });
-
-  return rows.sort((a, b) => {
-    const da = new Date(a.pb?.date || a.h?.date || 0).getTime();
-    const db = new Date(b.pb?.date || b.h?.date || 0).getTime();
-    return db - da;
-  });
-}
-
-function diffClass(a?: string | number | null, b?: string | number | null) {
-  if (a == null || b == null) return "";
-  return String(a) !== String(b) ? "text-yellow-400" : "";
-}
-
-/** Normalize "SECONDARY_TRANSACTION" → "Secondary Transaction" */
 function normalizeType(raw: string): string {
   if (!raw) return "";
   return raw
@@ -88,60 +33,106 @@ function normalizeType(raw: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
-  // Filter out Harmonic rounds with $0 amounts
-  const filteredHarmonic = harmonicRounds.filter(r => r.amount == null || r.amount > 0);
-  const rows = matchRounds(pbRounds, filteredHarmonic);
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">No funding rounds found.</p>;
+function getMonthKey(dateStr: string): string {
+  const d = normalizeDate(dateStr);
+  if (!d) return "Unknown";
+  return d.slice(0, 7); // "YYYY-MM"
+}
+
+function formatMonthLabel(key: string): string {
+  if (key === "Unknown") return "Unknown Date";
+  const [y, m] = key.split("-");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[parseInt(m, 10) - 1]} ${y}`;
+}
+
+interface MonthGroup {
+  key: string;
+  label: string;
+  pb: (FundingRound & { normalizedDate: string })[];
+  harmonic: (FundingRound & { normalizedDate: string })[];
+}
+
+function groupByMonth(pbRounds: FundingRound[], hRounds: FundingRound[]): MonthGroup[] {
+  const map = new Map<string, MonthGroup>();
+
+  for (const r of pbRounds) {
+    const k = getMonthKey(r.date);
+    if (!map.has(k)) map.set(k, { key: k, label: formatMonthLabel(k), pb: [], harmonic: [] });
+    map.get(k)!.pb.push({ ...r, normalizedDate: normalizeDate(r.date) });
+  }
+  for (const r of hRounds) {
+    const k = getMonthKey(r.date);
+    if (!map.has(k)) map.set(k, { key: k, label: formatMonthLabel(k), pb: [], harmonic: [] });
+    map.get(k)!.harmonic.push({ ...r, normalizedDate: normalizeDate(r.date) });
+  }
+
+  return Array.from(map.values()).sort((a, b) => (b.key > a.key ? 1 : -1));
+}
+
+function RoundRow({ round, logo, alt }: { round: FundingRound & { normalizedDate: string }; logo: string; alt: string }) {
+  const [open, setOpen] = useState(false);
+  const hasInvestors = round.investors && round.investors.length > 0;
 
   return (
-    <div className="rounded-md border border-border overflow-auto">
-      <Table>
-        <TableHeader>
-          <TableRow className="text-xs">
-            <TableHead colSpan={3} className="border-r border-border">
-              <span className="inline-flex items-center gap-1.5">
-                <img src={pbLogo} alt="PitchBook" className="h-4 w-4" />
-                PitchBook
-              </span>
-            </TableHead>
-            <TableHead colSpan={3}>
-              <span className="inline-flex items-center gap-1.5">
-                <img src={hLogo} alt="Harmonic" className="h-4 w-4" />
-                Harmonic
-              </span>
-            </TableHead>
-          </TableRow>
-          <TableRow className="text-xs">
-            <TableHead className="w-28">Date</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead className="text-right border-r border-border">Amount</TableHead>
-            <TableHead className="w-28">Date</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((r, i) => (
-            <TableRow key={i} className="font-mono text-xs">
-              <TableCell>{r.pb?.date ?? "—"}</TableCell>
-              <TableCell>
-                {r.pb?.type ?? "—"}
-              </TableCell>
-              <TableCell className={`text-right border-r border-border ${diffClass(r.pb?.amount, r.h?.amount)}`}>
-                {fmt(r.pb?.amount ?? null)}
-              </TableCell>
-              <TableCell>{r.h?.date ?? "—"}</TableCell>
-              <TableCell>
-                {r.h?.type ? normalizeType(r.h.type) : "—"}
-              </TableCell>
-              <TableCell className={`text-right ${diffClass(r.pb?.amount, r.h?.amount)}`}>
-                {fmt(r.h?.amount ?? null)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div>
+      <button
+        onClick={() => hasInvestors && setOpen(!open)}
+        className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs font-mono rounded transition-colors ${hasInvestors ? "hover:bg-muted/60 cursor-pointer" : "cursor-default"}`}
+      >
+        {hasInvestors ? (
+          open ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+        ) : (
+          <span className="w-3 shrink-0" />
+        )}
+        <img src={logo} alt={alt} className="h-3.5 w-3.5 shrink-0" />
+        <span className="text-muted-foreground w-20 shrink-0">{round.normalizedDate}</span>
+        <span className="flex-1 text-left">{alt === "Harmonic" ? normalizeType(round.type) : round.type || "—"}</span>
+        <span className="text-right tabular-nums">{fmt(round.amount)}</span>
+      </button>
+      {open && hasInvestors && (
+        <div className="ml-[4.5rem] px-3 pb-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground/70">Investors:</span>{" "}
+          {round.investors.join(", ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
+  const filteredHarmonic = harmonicRounds.filter(r => r.amount == null || r.amount > 0);
+  const months = groupByMonth(pbRounds, filteredHarmonic);
+
+  if (months.length === 0) return <p className="text-sm text-muted-foreground">No funding rounds found.</p>;
+
+  return (
+    <div className="space-y-1">
+      {months.map((m) => (
+        <div key={m.key} className="rounded-md border border-border overflow-hidden">
+          <div className="bg-muted/50 px-3 py-1.5 text-xs font-semibold tracking-wide text-foreground/80 border-b border-border">
+            {m.label}
+          </div>
+          <div className="divide-y divide-border/50">
+            {m.pb.map((r, i) => (
+              <RoundRow key={`pb-${i}`} round={r} logo={pbLogo} alt="PitchBook" />
+            ))}
+            {m.harmonic.map((r, i) => (
+              <RoundRow key={`h-${i}`} round={r} logo={hLogo} alt="Harmonic" />
+            ))}
+            {m.pb.length === 0 && (
+              <div className="px-3 py-1.5 text-xs text-muted-foreground/50 italic flex items-center gap-2">
+                <span className="w-3" /><img src={pbLogo} alt="" className="h-3.5 w-3.5 opacity-30" /> No PitchBook rounds
+              </div>
+            )}
+            {m.harmonic.length === 0 && (
+              <div className="px-3 py-1.5 text-xs text-muted-foreground/50 italic flex items-center gap-2">
+                <span className="w-3" /><img src={hLogo} alt="" className="h-3.5 w-3.5 opacity-30" /> No Harmonic rounds
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
