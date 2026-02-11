@@ -21,6 +21,10 @@ export async function fetchPBDealDetails(dealId: string, useSandbox: boolean) {
   return callProxy({ action: "pb_deal_details", pbId: dealId, useSandbox });
 }
 
+export async function fetchPBCredits() {
+  return callProxy({ action: "pb_credits", useSandbox: false });
+}
+
 export async function searchHarmonicByDomain(domain: string) {
   return callProxy({ action: "h_search", domain });
 }

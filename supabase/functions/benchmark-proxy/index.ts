@@ -61,6 +61,10 @@ serve(async (req) => {
           data = await fetchJSON(`${PB_BASE}/deals/${pbId}/detailed`, pbHeaders(apiKey));
           break;
         }
+        case "pb_credits": {
+          data = await fetchJSON(`${PB_BASE}/credits/history`, pbHeaders(apiKey));
+          break;
+        }
         default:
           throw new Error(`Unknown PB action: ${action}`);
       }
