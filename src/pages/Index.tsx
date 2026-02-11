@@ -4,7 +4,7 @@ import StatusBar from "@/components/StatusBar";
 import CompanyHeader from "@/components/CompanyHeader";
 import ComparisonTable from "@/components/ComparisonTable";
 import type { FundingRound, CompanyMeta, StatusMessage } from "@/lib/types";
-import { decodeDealType } from "@/lib/dealCodes";
+import { extractPBDealType } from "@/lib/dealCodes";
 import {
   fetchPBCompany,
   fetchPBDeals,
@@ -83,7 +83,7 @@ export default function Index() {
           const detail = await fetchPBDealDetails(d.dealId, useSandbox);
           pbFunding.push({
             date: detail.dealDate ?? d.dealDate ?? "",
-            type: decodeDealType(detail.dealType ?? d.dealType ?? ""),
+            type: extractPBDealType(detail, d),
             amount: (typeof (detail.dealSize ?? d.dealSize) === "object" ? (detail.dealSize ?? d.dealSize)?.amount : (detail.dealSize ?? d.dealSize)) ?? null,
             currency: "USD",
             investors: (detail.investors ?? []).map((inv: { investorName: string }) => inv.investorName),
@@ -92,7 +92,7 @@ export default function Index() {
         } catch {
           pbFunding.push({
             date: d.dealDate ?? "",
-            type: decodeDealType(d.dealType ?? ""),
+            type: extractPBDealType(null, d),
             amount: (typeof d.dealSize === "object" ? d.dealSize?.amount : d.dealSize) ?? null,
             currency: "USD",
             investors: [],
