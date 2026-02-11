@@ -111,29 +111,30 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
   if (months.length === 0) return <p className="text-sm text-muted-foreground">No funding rounds found.</p>;
 
   return (
-    <div className="space-y-1">
+    <div className="rounded-md border border-border overflow-hidden">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-background border-b border-border flex text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="w-1/2 px-3 py-1.5 border-r border-border/50">
+          <span className="inline-flex items-center gap-1">
+            <img src={pbLogo} alt="" className="h-3 w-3" /> PitchBook
+          </span>
+        </div>
+        <div className="w-1/2 px-3 py-1.5">
+          <span className="inline-flex items-center gap-1">
+            <img src={hLogo} alt="" className="h-3 w-3" /> Harmonic
+          </span>
+        </div>
+      </div>
+
+      {/* Month groups */}
       {months.map((m) => {
         const maxRows = Math.max(m.pb.length, m.harmonic.length, 1);
         return (
-          <div key={m.key} className="rounded-md border border-border overflow-hidden">
-            <div className="bg-muted/50 px-3 py-1.5 text-xs font-semibold tracking-wide text-foreground/80 border-b border-border">
+          <div key={m.key}>
+            <div className="bg-muted/50 px-3 py-1 text-xs font-semibold tracking-wide text-foreground/80 border-b border-t border-border">
               {m.label}
             </div>
             <table className="w-full">
-              <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/50">
-                  <th className="px-3 py-1 text-left border-r border-border/50 w-1/2">
-                    <span className="inline-flex items-center gap-1">
-                      <img src={pbLogo} alt="" className="h-3 w-3" /> PitchBook
-                    </span>
-                  </th>
-                  <th className="px-3 py-1 text-left w-1/2">
-                    <span className="inline-flex items-center gap-1">
-                      <img src={hLogo} alt="" className="h-3 w-3" /> Harmonic
-                    </span>
-                  </th>
-                </tr>
-              </thead>
               <tbody>
                 {Array.from({ length: maxRows }).map((_, i) => (
                   <tr key={i} className={i < maxRows - 1 ? "border-b border-border/30" : ""}>
