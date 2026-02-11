@@ -13,6 +13,8 @@ import hLogo from "@/assets/harmonic-logo.png";
 interface Props {
   pbRounds: FundingRound[];
   harmonicRounds: FundingRound[];
+  /** Filter out Harmonic rounds with $0 amounts */
+  filterZeroAmounts?: boolean;
 }
 
 function fmt(amount: number | null): string {
@@ -23,15 +25,30 @@ function fmt(amount: number | null): string {
   return `$${amount.toLocaleString()}`;
 }
 
+/** Normalize any date string to YYYY-MM-DD */
+function normalizeDate(raw: string): string {
+  if (!raw) return "";
+  // Handle ISO dates like "2025-03-31T00:00:00Z"
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().slice(0, 10);
+  }
+  return raw;
+}
+
 function matchRounds(pb: FundingRound[], h: FundingRound[]) {
+  // Normalize all dates first
+  const normPb = pb.map(r => ({ ...r, date: normalizeDate(r.date) }));
+  const normH = h.map(r => ({ ...r, date: normalizeDate(r.date) }));
+
   const used = new Set<number>();
   const rows: { pb?: FundingRound; h?: FundingRound }[] = [];
 
-  for (const p of pb) {
+  for (const p of normPb) {
     let best = -1;
     let bestDiff = Infinity;
     const pDate = new Date(p.date).getTime();
-    h.forEach((hr, i) => {
+    normH.forEach((hr, i) => {
       if (used.has(i)) return;
       const diff = Math.abs(new Date(hr.date).getTime() - pDate);
       if (diff < bestDiff && diff < 180 * 86400000) {
@@ -41,12 +58,12 @@ function matchRounds(pb: FundingRound[], h: FundingRound[]) {
     });
     if (best >= 0) {
       used.add(best);
-      rows.push({ pb: p, h: h[best] });
+      rows.push({ pb: p, h: normH[best] });
     } else {
       rows.push({ pb: p });
     }
   }
-  h.forEach((hr, i) => {
+  normH.forEach((hr, i) => {
     if (!used.has(i)) rows.push({ h: hr });
   });
 
@@ -63,7 +80,9 @@ function diffClass(a?: string | number | null, b?: string | number | null) {
 }
 
 export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
-  const rows = matchRounds(pbRounds, harmonicRounds);
+  // Filter out Harmonic rounds with $0 amounts
+  const filteredHarmonic = harmonicRounds.filter(r => r.amount == null || r.amount > 0);
+  const rows = matchRounds(pbRounds, filteredHarmonic);
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">No funding rounds found.</p>;
 
   return (
