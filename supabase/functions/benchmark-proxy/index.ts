@@ -54,11 +54,22 @@ serve(async (req) => {
         }
         case "pb_deals": {
           data = await fetchJSON(`${PB_BASE}/companies/${pbId}/deals`, pbHeaders(apiKey));
+          // Log deal structure for debugging
+          const deals = (data as Record<string, unknown>);
+          const items = (deals.items ?? deals) as Array<Record<string, unknown>>;
+          if (Array.isArray(items) && items.length > 0) {
+            console.log("PB deal[0] keys:", Object.keys(items[0]));
+            console.log("PB deal[0] dealType:", items[0].dealType);
+            console.log("PB deal[0] dealType2:", items[0].dealType2);
+            console.log("PB deal[0] sample:", JSON.stringify(items[0]).slice(0, 500));
+          }
           break;
         }
         case "pb_deal_details": {
           // pbId here is the dealId
           data = await fetchJSON(`${PB_BASE}/deals/${pbId}/detailed`, pbHeaders(apiKey));
+          const detail = data as Record<string, unknown>;
+          console.log("PB deal detail dealType:", detail.dealType, "dealType2:", detail.dealType2, "dealClass:", detail.dealClass);
           break;
         }
         case "pb_credits": {
