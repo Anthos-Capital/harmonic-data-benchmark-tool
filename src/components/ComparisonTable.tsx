@@ -140,13 +140,45 @@ function RoundRow({ pb, harmonic }: { pb?: NormalizedRound; harmonic?: Normalize
   );
 }
 
+function buildMarkdown(months: MonthGroup[]): string {
+  const header = "| PB-Date | PB-Type | PB-Amount | H-Date | H-Type | H-Amount |";
+  const sep = "|---|---|---|---|---|---|";
+  const rows: string[] = [];
+  for (const m of months) {
+    const max = Math.max(m.pb.length, m.harmonic.length, 1);
+    for (let i = 0; i < max; i++) {
+      const pb = m.pb[i];
+      const h = m.harmonic[i];
+      rows.push(`| ${pb?.normalizedDate ?? "—"} | ${pb?.type ?? "—"} | ${fmt(pb?.amount ?? null)} | ${h?.normalizedDate ?? "—"} | ${h?.type ? normalizeType(h.type) : "—"} | ${fmt(h?.amount ?? null)} |`);
+    }
+  }
+  return [header, sep, ...rows].join("\n");
+}
+
 export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
+  const [copied, setCopied] = useState(false);
   const filteredHarmonic = harmonicRounds.filter(r => r.amount == null || r.amount > 0);
   const months = groupByMonth(pbRounds, filteredHarmonic);
 
   if (months.length === 0) return <p className="text-sm text-muted-foreground">No funding rounds found.</p>;
 
+  const handleCopy = async () => {
+    const md = buildMarkdown(months);
+    await navigator.clipboard.writeText(md);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <button
+          onClick={handleCopy}
+          className="text-xs font-mono px-3 py-1.5 rounded-md border border-border bg-muted hover:bg-muted/80 text-foreground transition-colors"
+        >
+          {copied ? "✓ Copied" : "Copy as Markdown"}
+        </button>
+      </div>
     <div className="rounded-md border border-border overflow-auto">
       <table className="w-full table-fixed border-collapse">
         <colgroup>
@@ -205,6 +237,7 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
           })}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }
