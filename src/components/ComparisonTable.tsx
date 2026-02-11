@@ -51,7 +51,7 @@ function matchRounds(pb: FundingRound[], h: FundingRound[]) {
     normH.forEach((hr, i) => {
       if (used.has(i)) return;
       const diff = Math.abs(new Date(hr.date).getTime() - pDate);
-      if (diff < bestDiff && diff < 180 * 86400000) {
+      if (diff < bestDiff && diff < 90 * 86400000) {
         bestDiff = diff;
         best = i;
       }
