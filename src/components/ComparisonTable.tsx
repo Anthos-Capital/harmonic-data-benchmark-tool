@@ -107,18 +107,18 @@ function RoundRow({ pb, harmonic }: { pb?: NormalizedRound; harmonic?: Normalize
         onClick={() => expandable && setOpen(!open)}
       >
         {/* Expand icon */}
-        <td className="pl-2 pr-0 py-1.5 w-5 text-muted-foreground">
+        <td className="pl-2 pr-0 py-1.5 text-muted-foreground">
           {expandable ? (
             open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
           ) : null}
         </td>
         {/* PB columns */}
-        <td className="px-3 py-1.5 text-muted-foreground w-24">{pb?.normalizedDate ?? "—"}</td>
-        <td className="px-3 py-1.5">{pb?.type ?? "—"}</td>
+        <td className="px-3 py-1.5 text-muted-foreground">{pb?.normalizedDate ?? "—"}</td>
+        <td className="px-3 py-1.5 truncate">{pb?.type ?? "—"}</td>
         <td className="px-3 py-1.5 text-right tabular-nums border-r border-border">{fmt(pb?.amount ?? null)}</td>
         {/* Harmonic columns */}
-        <td className="px-3 py-1.5 text-muted-foreground w-24">{harmonic?.normalizedDate ?? "—"}</td>
-        <td className="px-3 py-1.5">{harmonic?.type ? normalizeType(harmonic.type) : "—"}</td>
+        <td className="px-3 py-1.5 text-muted-foreground">{harmonic?.normalizedDate ?? "—"}</td>
+        <td className="px-3 py-1.5 truncate">{harmonic?.type ? normalizeType(harmonic.type) : "—"}</td>
         <td className="px-3 py-1.5 text-right tabular-nums">{fmt(harmonic?.amount ?? null)}</td>
       </tr>
       {open && (hasPbInvestors || hasHInvestors) && (
@@ -148,11 +148,22 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
 
   return (
     <div className="rounded-md border border-border overflow-auto">
-      <table className="w-full border-collapse">
+      <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-5" />
+          {/* PB: date, type, amount */}
+          <col style={{ width: "5.5rem" }} />
+          <col />
+          <col style={{ width: "5rem" }} />
+          {/* H: date, type, amount */}
+          <col style={{ width: "5.5rem" }} />
+          <col />
+          <col style={{ width: "5rem" }} />
+        </colgroup>
         <thead className="sticky top-0 z-10 bg-background">
           {/* Source row */}
           <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
-            <th className="w-5" />
+            <th />
             <th colSpan={3} className="px-3 py-1.5 text-left border-r border-border">
               <span className="inline-flex items-center gap-1">
                 <img src={pbLogo} alt="" className="h-3 w-3" /> PitchBook
@@ -166,11 +177,11 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
           </tr>
           {/* Column headers */}
           <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
-            <th className="w-5" />
-            <th className="px-3 py-1 text-left w-24">Date</th>
+            <th />
+            <th className="px-3 py-1 text-left">Date</th>
             <th className="px-3 py-1 text-left">Type</th>
             <th className="px-3 py-1 text-right border-r border-border">Amount</th>
-            <th className="px-3 py-1 text-left w-24">Date</th>
+            <th className="px-3 py-1 text-left">Date</th>
             <th className="px-3 py-1 text-left">Type</th>
             <th className="px-3 py-1 text-right">Amount</th>
           </tr>
