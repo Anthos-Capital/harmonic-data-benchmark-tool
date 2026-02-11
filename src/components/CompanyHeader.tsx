@@ -8,6 +8,8 @@ interface Props {
   harmonic?: CompanyMeta;
   pbId?: string;
   harmonicId?: string;
+  pbTotalRaised?: number | null;
+  harmonicTotalRaised?: number | null;
 }
 
 function MetaRow({ label, pbVal, hVal }: { label: string; pbVal?: string; hVal?: string }) {
@@ -26,7 +28,15 @@ function MetaRow({ label, pbVal, hVal }: { label: string; pbVal?: string; hVal?:
   );
 }
 
-export default function CompanyHeader({ pb, harmonic, pbId, harmonicId }: Props) {
+function fmtTotal(amount: number | null | undefined): string {
+  if (amount == null) return "—";
+  if (amount >= 1e9) return `$${(amount / 1e9).toFixed(1)}B`;
+  if (amount >= 1e6) return `$${(amount / 1e6).toFixed(1)}M`;
+  if (amount >= 1e3) return `$${(amount / 1e3).toFixed(0)}K`;
+  return `$${amount.toLocaleString()}`;
+}
+
+export default function CompanyHeader({ pb, harmonic, pbId, harmonicId, pbTotalRaised, harmonicTotalRaised }: Props) {
   const name = pb?.name || harmonic?.name;
   if (!name) return null;
 
@@ -72,6 +82,7 @@ export default function CompanyHeader({ pb, harmonic, pbId, harmonicId }: Props)
             <MetaRow label="HQ" pbVal={pb?.hq} hVal={harmonic?.hq} />
             <MetaRow label="Founded" pbVal={pb?.founded} hVal={harmonic?.founded} />
             <MetaRow label="ID" pbVal={pbId} hVal={harmonicId} />
+            <MetaRow label="Total Raised" pbVal={fmtTotal(pbTotalRaised)} hVal={fmtTotal(harmonicTotalRaised)} />
             {(pb?.description || harmonic?.description) && (
               <tr className="text-xs">
                 <td className="pr-4 py-1 font-medium text-muted-foreground whitespace-nowrap align-top">Bio</td>

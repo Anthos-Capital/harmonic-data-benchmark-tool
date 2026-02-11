@@ -198,7 +198,14 @@ export default function Index() {
           ⚡ Estimated PitchBook credits consumed: {creditsUsed}
         </p>
       )}
-      <CompanyHeader pb={pbMeta} harmonic={hMeta} pbId={currentPbId} harmonicId={currentHId} />
+      <CompanyHeader
+        pb={pbMeta}
+        harmonic={hMeta}
+        pbId={currentPbId}
+        harmonicId={currentHId}
+        pbTotalRaised={pbRounds.reduce((sum, r) => sum + (r.amount ?? 0), 0) || null}
+        harmonicTotalRaised={hRounds.reduce((sum, r) => sum + (r.amount ?? 0), 0) || null}
+      />
       {(pbRounds.length > 0 || hRounds.length > 0) && (
         <ComparisonTable pbRounds={pbRounds} harmonicRounds={hRounds} />
       )}
