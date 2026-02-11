@@ -113,11 +113,11 @@ function RoundRow({ pb, harmonic }: { pb?: NormalizedRound; harmonic?: Normalize
           ) : null}
         </td>
         {/* PB columns */}
-        <td className="px-3 py-1.5 text-muted-foreground">{pb?.normalizedDate ?? "—"}</td>
+        <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{pb?.normalizedDate ?? "—"}</td>
         <td className="px-3 py-1.5 truncate">{pb?.type ?? "—"}</td>
         <td className="px-3 py-1.5 text-right tabular-nums border-r border-border">{fmt(pb?.amount ?? null)}</td>
         {/* Harmonic columns */}
-        <td className="px-3 py-1.5 text-muted-foreground">{harmonic?.normalizedDate ?? "—"}</td>
+        <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{harmonic?.normalizedDate ?? "—"}</td>
         <td className="px-3 py-1.5 truncate">{harmonic?.type ? normalizeType(harmonic.type) : "—"}</td>
         <td className="px-3 py-1.5 text-right tabular-nums">{fmt(harmonic?.amount ?? null)}</td>
       </tr>
@@ -150,13 +150,13 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
     <div className="rounded-md border border-border overflow-auto">
       <table className="w-full table-fixed border-collapse">
         <colgroup>
-          <col className="w-5" />
+          <col style={{ width: "1.25rem" }} />
           {/* PB: date, type, amount */}
-          <col style={{ width: "5.5rem" }} />
+          <col style={{ width: "6.5rem" }} />
           <col />
           <col style={{ width: "5rem" }} />
           {/* H: date, type, amount */}
-          <col style={{ width: "5.5rem" }} />
+          <col style={{ width: "6.5rem" }} />
           <col />
           <col style={{ width: "5rem" }} />
         </colgroup>
