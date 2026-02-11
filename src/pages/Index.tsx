@@ -9,6 +9,7 @@ import {
   fetchPBCompany,
   fetchPBDeals,
   fetchPBDealDetails,
+  fetchPBCredits,
   searchHarmonicByDomain,
   fetchHarmonicCompany,
 } from "@/lib/api";
@@ -22,6 +23,7 @@ export default function Index() {
   const [pbRounds, setPbRounds] = useState<FundingRound[]>([]);
   const [hRounds, setHRounds] = useState<FundingRound[]>([]);
   const [loading, setLoading] = useState(false);
+  const [creditsUsed, setCreditsUsed] = useState<number | null>(null);
 
   const updateStep = (step: string, status: StatusMessage["status"], detail?: string) =>
     setSteps((prev) => {
@@ -45,8 +47,19 @@ export default function Index() {
     setCurrentHId(undefined);
     setPbRounds([]);
     setHRounds([]);
+    setCreditsUsed(null);
+
+    let creditsBefore: number | null = null;
 
     try {
+      // 0. Snapshot PB credits before
+      try {
+        const creditsRes = await fetchPBCredits();
+        const items = Array.isArray(creditsRes) ? creditsRes : [creditsRes];
+        const active = items.find((c: { activeContract?: boolean }) => c.activeContract) ?? items[0];
+        if (active) creditsBefore = active.creditsUsed ?? null;
+      } catch { /* non-fatal */ }
+
       // 1. PB Company
       updateStep("PB Company", "loading");
       const company = await fetchPBCompany(pbId, useSandbox);
@@ -89,6 +102,18 @@ export default function Index() {
       }
       setPbRounds(pbFunding);
       updateStep("PB Deals", "done", `${pbFunding.length} rounds`);
+
+      // 2b. Snapshot PB credits after
+      if (creditsBefore !== null) {
+        try {
+          const creditsRes = await fetchPBCredits();
+          const items = Array.isArray(creditsRes) ? creditsRes : [creditsRes];
+          const active = items.find((c: { activeContract?: boolean }) => c.activeContract) ?? items[0];
+          if (active && active.creditsUsed != null) {
+            setCreditsUsed(active.creditsUsed - creditsBefore);
+          }
+        } catch { /* non-fatal */ }
+      }
 
       // 3. Harmonic lookup
       if (meta.website) {
@@ -168,6 +193,11 @@ export default function Index() {
 
       <SearchBar onSearch={run} loading={loading} />
       <StatusBar steps={steps} />
+      {creditsUsed !== null && (
+        <p className="text-xs font-mono text-destructive">
+          ⚡ Estimated PitchBook credits consumed: {creditsUsed}
+        </p>
+      )}
       <CompanyHeader pb={pbMeta} harmonic={hMeta} pbId={currentPbId} harmonicId={currentHId} />
       {(pbRounds.length > 0 || hRounds.length > 0) && (
         <ComparisonTable pbRounds={pbRounds} harmonicRounds={hRounds} />
