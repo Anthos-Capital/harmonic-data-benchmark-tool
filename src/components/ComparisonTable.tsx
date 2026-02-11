@@ -36,7 +36,7 @@ function normalizeType(raw: string): string {
 function getMonthKey(dateStr: string): string {
   const d = normalizeDate(dateStr);
   if (!d) return "Unknown";
-  return d.slice(0, 7); // "YYYY-MM"
+  return d.slice(0, 7);
 }
 
 function formatMonthLabel(key: string): string {
@@ -46,11 +46,13 @@ function formatMonthLabel(key: string): string {
   return `${months[parseInt(m, 10) - 1]} ${y}`;
 }
 
+type NormalizedRound = FundingRound & { normalizedDate: string };
+
 interface MonthGroup {
   key: string;
   label: string;
-  pb: (FundingRound & { normalizedDate: string })[];
-  harmonic: (FundingRound & { normalizedDate: string })[];
+  pb: NormalizedRound[];
+  harmonic: NormalizedRound[];
 }
 
 function groupByMonth(pbRounds: FundingRound[], hRounds: FundingRound[]): MonthGroup[] {
@@ -70,33 +72,35 @@ function groupByMonth(pbRounds: FundingRound[], hRounds: FundingRound[]): MonthG
   return Array.from(map.values()).sort((a, b) => (b.key > a.key ? 1 : -1));
 }
 
-function RoundRow({ round, logo, alt }: { round: FundingRound & { normalizedDate: string }; logo: string; alt: string }) {
+function RoundCell({ round, isHarmonic }: { round?: NormalizedRound; isHarmonic?: boolean }) {
   const [open, setOpen] = useState(false);
+  if (!round) return <td className="px-3 py-1.5 text-xs text-muted-foreground/40 italic align-top">—</td>;
+
   const hasInvestors = round.investors && round.investors.length > 0;
+  const type = isHarmonic ? normalizeType(round.type) : round.type;
 
   return (
-    <div>
+    <td className="px-3 py-1.5 align-top">
       <button
         onClick={() => hasInvestors && setOpen(!open)}
-        className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs font-mono rounded transition-colors ${hasInvestors ? "hover:bg-muted/60 cursor-pointer" : "cursor-default"}`}
+        className={`w-full flex items-center gap-2 text-xs font-mono rounded transition-colors ${hasInvestors ? "hover:bg-muted/60 cursor-pointer" : "cursor-default"}`}
       >
         {hasInvestors ? (
           open ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
         ) : (
           <span className="w-3 shrink-0" />
         )}
-        <img src={logo} alt={alt} className="h-3.5 w-3.5 shrink-0" />
-        <span className="text-muted-foreground w-20 shrink-0">{round.normalizedDate}</span>
-        <span className="flex-1 text-left">{alt === "Harmonic" ? normalizeType(round.type) : round.type || "—"}</span>
+        <span className="text-muted-foreground w-20 shrink-0 text-left">{round.normalizedDate}</span>
+        <span className="flex-1 text-left">{type || "—"}</span>
         <span className="text-right tabular-nums">{fmt(round.amount)}</span>
       </button>
       {open && hasInvestors && (
-        <div className="ml-[4.5rem] px-3 pb-2 text-xs text-muted-foreground">
+        <div className="ml-5 mt-1 text-xs text-muted-foreground">
           <span className="font-medium text-foreground/70">Investors:</span>{" "}
           {round.investors.join(", ")}
         </div>
       )}
-    </div>
+    </td>
   );
 }
 
@@ -108,31 +112,40 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
 
   return (
     <div className="space-y-1">
-      {months.map((m) => (
-        <div key={m.key} className="rounded-md border border-border overflow-hidden">
-          <div className="bg-muted/50 px-3 py-1.5 text-xs font-semibold tracking-wide text-foreground/80 border-b border-border">
-            {m.label}
+      {months.map((m) => {
+        const maxRows = Math.max(m.pb.length, m.harmonic.length, 1);
+        return (
+          <div key={m.key} className="rounded-md border border-border overflow-hidden">
+            <div className="bg-muted/50 px-3 py-1.5 text-xs font-semibold tracking-wide text-foreground/80 border-b border-border">
+              {m.label}
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/50">
+                  <th className="px-3 py-1 text-left border-r border-border/50 w-1/2">
+                    <span className="inline-flex items-center gap-1">
+                      <img src={pbLogo} alt="" className="h-3 w-3" /> PitchBook
+                    </span>
+                  </th>
+                  <th className="px-3 py-1 text-left w-1/2">
+                    <span className="inline-flex items-center gap-1">
+                      <img src={hLogo} alt="" className="h-3 w-3" /> Harmonic
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: maxRows }).map((_, i) => (
+                  <tr key={i} className={i < maxRows - 1 ? "border-b border-border/30" : ""}>
+                    <RoundCell round={m.pb[i]} />
+                    <RoundCell round={m.harmonic[i]} isHarmonic />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="divide-y divide-border/50">
-            {m.pb.map((r, i) => (
-              <RoundRow key={`pb-${i}`} round={r} logo={pbLogo} alt="PitchBook" />
-            ))}
-            {m.harmonic.map((r, i) => (
-              <RoundRow key={`h-${i}`} round={r} logo={hLogo} alt="Harmonic" />
-            ))}
-            {m.pb.length === 0 && (
-              <div className="px-3 py-1.5 text-xs text-muted-foreground/50 italic flex items-center gap-2">
-                <span className="w-3" /><img src={pbLogo} alt="" className="h-3.5 w-3.5 opacity-30" /> No PitchBook rounds
-              </div>
-            )}
-            {m.harmonic.length === 0 && (
-              <div className="px-3 py-1.5 text-xs text-muted-foreground/50 italic flex items-center gap-2">
-                <span className="w-3" /><img src={hLogo} alt="" className="h-3.5 w-3.5 opacity-30" /> No Harmonic rounds
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
