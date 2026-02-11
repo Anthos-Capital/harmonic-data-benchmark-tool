@@ -72,30 +72,28 @@ export default function CompanyHeader({ pb, harmonic, pbId, harmonicId }: Props)
             <MetaRow label="HQ" pbVal={pb?.hq} hVal={harmonic?.hq} />
             <MetaRow label="Founded" pbVal={pb?.founded} hVal={harmonic?.founded} />
             <MetaRow label="ID" pbVal={pbId} hVal={harmonicId} />
+            {(pb?.description || harmonic?.description) && (
+              <tr className="text-xs">
+                <td className="pr-4 py-1 font-medium text-muted-foreground whitespace-nowrap align-top">Bio</td>
+                <td className="pr-4 py-1 align-top">
+                  {pb?.description ? (
+                    <p className="text-sm text-muted-foreground max-w-md leading-relaxed">{pb.description}</p>
+                  ) : (
+                    <span className="text-muted-foreground/50">—</span>
+                  )}
+                </td>
+                <td className="py-1 align-top">
+                  {harmonic?.description ? (
+                    <p className="text-sm text-muted-foreground max-w-md leading-relaxed">{harmonic.description}</p>
+                  ) : (
+                    <span className="text-muted-foreground/50">—</span>
+                  )}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-
-      {(pb?.description || harmonic?.description) && (
-        <div className="space-y-2">
-          {pb?.description && (
-            <div>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider inline-flex items-center gap-1">
-                <img src={pbLogo} alt="" className="h-3 w-3" /> PB Bio
-              </span>
-              <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">{pb.description}</p>
-            </div>
-          )}
-          {harmonic?.description && (
-            <div>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider inline-flex items-center gap-1">
-                <img src={hLogo} alt="" className="h-3 w-3" /> Harmonic Bio
-              </span>
-              <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">{harmonic.description}</p>
-            </div>
-          )}
-        </div>
-      )}
 
       {!harmonic && pb?.website && (
         <p className="text-xs text-muted-foreground/70 italic">

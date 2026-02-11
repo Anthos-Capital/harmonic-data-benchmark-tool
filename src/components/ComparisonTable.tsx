@@ -79,6 +79,15 @@ function diffClass(a?: string | number | null, b?: string | number | null) {
   return String(a) !== String(b) ? "text-yellow-400" : "";
 }
 
+/** Normalize "SECONDARY_TRANSACTION" → "Secondary Transaction" */
+function normalizeType(raw: string): string {
+  if (!raw) return "";
+  return raw
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
   // Filter out Harmonic rounds with $0 amounts
   const filteredHarmonic = harmonicRounds.filter(r => r.amount == null || r.amount > 0);
@@ -116,15 +125,15 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
           {rows.map((r, i) => (
             <TableRow key={i} className="font-mono text-xs">
               <TableCell>{r.pb?.date ?? "—"}</TableCell>
-              <TableCell className={diffClass(r.pb?.type, r.h?.type)}>
+              <TableCell>
                 {r.pb?.type ?? "—"}
               </TableCell>
               <TableCell className={`text-right border-r border-border ${diffClass(r.pb?.amount, r.h?.amount)}`}>
                 {fmt(r.pb?.amount ?? null)}
               </TableCell>
               <TableCell>{r.h?.date ?? "—"}</TableCell>
-              <TableCell className={diffClass(r.pb?.type, r.h?.type)}>
-                {r.h?.type ?? "—"}
+              <TableCell>
+                {r.h?.type ? normalizeType(r.h.type) : "—"}
               </TableCell>
               <TableCell className={`text-right ${diffClass(r.pb?.amount, r.h?.amount)}`}>
                 {fmt(r.h?.amount ?? null)}
