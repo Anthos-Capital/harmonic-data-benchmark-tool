@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import type { FundingRound } from "@/lib/types";
 import pbLogo from "@/assets/pitchbook-logo.png";
 import hLogo from "@/assets/harmonic-logo.png";
@@ -72,35 +72,71 @@ function groupByMonth(pbRounds: FundingRound[], hRounds: FundingRound[]): MonthG
   return Array.from(map.values()).sort((a, b) => (b.key > a.key ? 1 : -1));
 }
 
-function RoundCell({ round, isHarmonic }: { round?: NormalizedRound; isHarmonic?: boolean }) {
+function InvestorExpander({ round }: { round: NormalizedRound }) {
   const [open, setOpen] = useState(false);
-  if (!round) return <td className="px-3 py-1.5 text-xs text-muted-foreground/40 italic align-top">—</td>;
-
   const hasInvestors = round.investors && round.investors.length > 0;
-  const type = isHarmonic ? normalizeType(round.type) : round.type;
+  if (!hasInvestors) return <span className="w-4 inline-block" />;
 
   return (
-    <td className="px-3 py-1.5 align-top">
-      <button
-        onClick={() => hasInvestors && setOpen(!open)}
-        className={`w-full flex items-center gap-2 text-xs font-mono rounded transition-colors ${hasInvestors ? "hover:bg-muted/60 cursor-pointer" : "cursor-default"}`}
-      >
-        {hasInvestors ? (
-          open ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
-        ) : (
-          <span className="w-3 shrink-0" />
-        )}
-        <span className="text-muted-foreground w-20 shrink-0 text-left">{round.normalizedDate}</span>
-        <span className="flex-1 text-left">{type || "—"}</span>
-        <span className="text-right tabular-nums">{fmt(round.amount)}</span>
+    <>
+      <button onClick={() => setOpen(!open)} className="inline-flex items-center hover:text-foreground transition-colors">
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
       </button>
-      {open && hasInvestors && (
-        <div className="ml-5 mt-1 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground/70">Investors:</span>{" "}
-          {round.investors.join(", ")}
-        </div>
+      {open && (
+        <tr>
+          <td colSpan={7} className="px-6 py-1 text-xs text-muted-foreground border-b border-border/30">
+            <span className="font-medium text-foreground/70">Investors:</span>{" "}
+            {round.investors.join(", ")}
+          </td>
+        </tr>
       )}
-    </td>
+    </>
+  );
+}
+
+function RoundRow({ pb, harmonic }: { pb?: NormalizedRound; harmonic?: NormalizedRound }) {
+  const [open, setOpen] = useState(false);
+  const hasPbInvestors = pb?.investors && pb.investors.length > 0;
+  const hasHInvestors = harmonic?.investors && harmonic.investors.length > 0;
+  const expandable = hasPbInvestors || hasHInvestors;
+
+  return (
+    <>
+      <tr
+        className={`text-xs font-mono border-b border-border/30 ${expandable ? "cursor-pointer hover:bg-muted/40" : ""}`}
+        onClick={() => expandable && setOpen(!open)}
+      >
+        {/* Expand icon */}
+        <td className="pl-2 pr-0 py-1.5 w-5 text-muted-foreground">
+          {expandable ? (
+            open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
+          ) : null}
+        </td>
+        {/* PB columns */}
+        <td className="px-3 py-1.5 text-muted-foreground w-24">{pb?.normalizedDate ?? "—"}</td>
+        <td className="px-3 py-1.5">{pb?.type ?? "—"}</td>
+        <td className="px-3 py-1.5 text-right tabular-nums border-r border-border">{fmt(pb?.amount ?? null)}</td>
+        {/* Harmonic columns */}
+        <td className="px-3 py-1.5 text-muted-foreground w-24">{harmonic?.normalizedDate ?? "—"}</td>
+        <td className="px-3 py-1.5">{harmonic?.type ? normalizeType(harmonic.type) : "—"}</td>
+        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(harmonic?.amount ?? null)}</td>
+      </tr>
+      {open && (hasPbInvestors || hasHInvestors) && (
+        <tr className="text-xs border-b border-border/30 bg-muted/20">
+          <td className="pl-2 pr-0 py-1" />
+          <td colSpan={3} className="px-3 py-1.5 text-muted-foreground border-r border-border align-top">
+            {hasPbInvestors ? (
+              <><span className="font-medium text-foreground/70">Investors:</span> {pb!.investors.join(", ")}</>
+            ) : <span className="text-muted-foreground/40 italic">No investor data</span>}
+          </td>
+          <td colSpan={3} className="px-3 py-1.5 text-muted-foreground align-top">
+            {hasHInvestors ? (
+              <><span className="font-medium text-foreground/70">Investors:</span> {harmonic!.investors.join(", ")}</>
+            ) : <span className="text-muted-foreground/40 italic">No investor data</span>}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -111,42 +147,55 @@ export default function ComparisonTable({ pbRounds, harmonicRounds }: Props) {
   if (months.length === 0) return <p className="text-sm text-muted-foreground">No funding rounds found.</p>;
 
   return (
-    <div className="rounded-md border border-border overflow-hidden">
-      {/* Sticky header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border flex text-[10px] uppercase tracking-wider text-muted-foreground">
-        <div className="w-1/2 px-3 py-1.5 border-r border-border/50">
-          <span className="inline-flex items-center gap-1">
-            <img src={pbLogo} alt="" className="h-3 w-3" /> PitchBook
-          </span>
-        </div>
-        <div className="w-1/2 px-3 py-1.5">
-          <span className="inline-flex items-center gap-1">
-            <img src={hLogo} alt="" className="h-3 w-3" /> Harmonic
-          </span>
-        </div>
-      </div>
-
-      {/* Month groups */}
-      {months.map((m) => {
-        const maxRows = Math.max(m.pb.length, m.harmonic.length, 1);
-        return (
-          <div key={m.key}>
-            <div className="bg-muted/50 px-3 py-1 text-xs font-semibold tracking-wide text-foreground/80 border-b border-t border-border">
-              {m.label}
-            </div>
-            <table className="w-full">
-              <tbody>
+    <div className="rounded-md border border-border overflow-auto">
+      <table className="w-full border-collapse">
+        <thead className="sticky top-0 z-10 bg-background">
+          {/* Source row */}
+          <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+            <th className="w-5" />
+            <th colSpan={3} className="px-3 py-1.5 text-left border-r border-border">
+              <span className="inline-flex items-center gap-1">
+                <img src={pbLogo} alt="" className="h-3 w-3" /> PitchBook
+              </span>
+            </th>
+            <th colSpan={3} className="px-3 py-1.5 text-left">
+              <span className="inline-flex items-center gap-1">
+                <img src={hLogo} alt="" className="h-3 w-3" /> Harmonic
+              </span>
+            </th>
+          </tr>
+          {/* Column headers */}
+          <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+            <th className="w-5" />
+            <th className="px-3 py-1 text-left w-24">Date</th>
+            <th className="px-3 py-1 text-left">Type</th>
+            <th className="px-3 py-1 text-right border-r border-border">Amount</th>
+            <th className="px-3 py-1 text-left w-24">Date</th>
+            <th className="px-3 py-1 text-left">Type</th>
+            <th className="px-3 py-1 text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {months.map((m) => {
+            const maxRows = Math.max(m.pb.length, m.harmonic.length, 1);
+            return (
+              <Fragment key={m.key}>
+                {/* Month header */}
+                <tr>
+                  <td colSpan={7} className="bg-muted/50 px-3 py-1 text-xs font-semibold tracking-wide text-foreground/80 border-b border-t border-border">
+                    {m.label}
+                  </td>
+                </tr>
                 {Array.from({ length: maxRows }).map((_, i) => (
-                  <tr key={i} className={i < maxRows - 1 ? "border-b border-border/30" : ""}>
-                    <RoundCell round={m.pb[i]} />
-                    <RoundCell round={m.harmonic[i]} isHarmonic />
-                  </tr>
+                  <RoundRow key={i} pb={m.pb[i]} harmonic={m.harmonic[i]} />
                 ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
+
+
