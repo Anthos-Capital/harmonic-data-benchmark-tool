@@ -35,7 +35,8 @@ export default function Index() {
       return [...prev, updated];
     });
 
-  const run = useCallback(async (pbId: string, useSandbox: boolean) => {
+  const run = useCallback(async (pbId: string) => {
+    const useSandbox = false;
     setLoading(true);
     setSteps([]);
     setPbMeta(undefined);
