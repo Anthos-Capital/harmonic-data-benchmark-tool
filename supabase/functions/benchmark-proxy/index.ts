@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +9,26 @@ const corsHeaders = {
 
 const PB_BASE = "https://api.pitchbook.com";
 const HARMONIC_BASE = "https://api.harmonic.ai";
+
+const VALID_ACTIONS = new Set([
+  "pb_company", "pb_deals", "pb_deal_details", "pb_credits",
+  "h_search", "h_company",
+]);
+
+function validateString(val: unknown, name: string, maxLen = 500): string {
+  if (typeof val !== "string" || val.length === 0 || val.length > maxLen) {
+    throw new Error(`Invalid ${name}`);
+  }
+  return val.trim();
+}
+
+function validateDomain(val: unknown): string {
+  const s = validateString(val, "domain", 253);
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(s)) {
+    throw new Error("Invalid domain format");
+  }
+  return s;
+}
 
 function pbHeaders(apiKey: string) {
   return {
@@ -27,8 +48,18 @@ function harmonicHeaders(apiKey: string) {
 async function fetchJSON(url: string, headers: Record<string, string>) {
   const res = await fetch(url, { headers });
   const body = await res.text();
-  if (!res.ok) throw new Error(`[${res.status}]: ${body}`);
+  if (!res.ok) {
+    console.error(`API error [${res.status}]: ${body}`);
+    throw new Error("External API request failed");
+  }
   return JSON.parse(body);
+}
+
+function errorResponse(msg: string, status = 500) {
+  return new Response(JSON.stringify({ error: msg }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 serve(async (req) => {
@@ -37,39 +68,54 @@ serve(async (req) => {
   }
 
   try {
-    const { action, pbId, domain, harmonicId, useSandbox } = await req.json();
+    // Authenticate the user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return errorResponse("Unauthorized", 401);
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return errorResponse("Unauthorized", 401);
+    }
+
+    // Parse and validate input
+    const body = await req.json();
+    const action = validateString(body.action, "action", 50);
+    if (!VALID_ACTIONS.has(action)) {
+      return errorResponse("Invalid action", 400);
+    }
+
+    const useSandbox = body.useSandbox === true;
 
     // PitchBook actions
     if (action.startsWith("pb_")) {
       const apiKey = useSandbox
         ? Deno.env.get("PITCHBOOK_API_KEY_SANDBOX")
         : Deno.env.get("PITCHBOOK_API_KEY_LIVE");
-      if (!apiKey) throw new Error("PitchBook API key not configured");
+      if (!apiKey) return errorResponse("API key not configured", 500);
+
+      const pbId = action !== "pb_credits" ? validateString(body.pbId, "pbId", 100) : "";
 
       let data: unknown;
       switch (action) {
         case "pb_company": {
-          data = await fetchJSON(`${PB_BASE}/companies/${pbId}/bio`, pbHeaders(apiKey));
+          data = await fetchJSON(`${PB_BASE}/companies/${encodeURIComponent(pbId)}/bio`, pbHeaders(apiKey));
           break;
         }
         case "pb_deals": {
-          data = await fetchJSON(`${PB_BASE}/companies/${pbId}/deals`, pbHeaders(apiKey));
-          // Log deal structure for debugging
-          const deals = (data as Record<string, unknown>);
-          const items = (deals.items ?? deals) as Array<Record<string, unknown>>;
-          if (Array.isArray(items) && items.length > 0) {
-            console.log("PB deal[0] keys:", Object.keys(items[0]));
-            console.log("PB deal[0] dealType:", items[0].dealType);
-            console.log("PB deal[0] dealType2:", items[0].dealType2);
-            console.log("PB deal[0] sample:", JSON.stringify(items[0]).slice(0, 500));
-          }
+          data = await fetchJSON(`${PB_BASE}/companies/${encodeURIComponent(pbId)}/deals`, pbHeaders(apiKey));
           break;
         }
         case "pb_deal_details": {
-          // pbId here is the dealId
-          data = await fetchJSON(`${PB_BASE}/deals/${pbId}/detailed`, pbHeaders(apiKey));
-          const detail = data as Record<string, unknown>;
-          console.log("PB deal detail dealType:", detail.dealType, "dealType2:", detail.dealType2, "dealClass:", detail.dealClass);
+          data = await fetchJSON(`${PB_BASE}/deals/${encodeURIComponent(pbId)}/detailed`, pbHeaders(apiKey));
           break;
         }
         case "pb_credits": {
@@ -77,7 +123,7 @@ serve(async (req) => {
           break;
         }
         default:
-          throw new Error(`Unknown PB action: ${action}`);
+          return errorResponse("Invalid action", 400);
       }
 
       return new Response(JSON.stringify(data), {
@@ -88,38 +134,35 @@ serve(async (req) => {
     // Harmonic actions
     if (action.startsWith("h_")) {
       const apiKey = Deno.env.get("HARMONIC_API_KEY");
-      if (!apiKey) throw new Error("Harmonic API key not configured");
+      if (!apiKey) return errorResponse("API key not configured", 500);
 
       let data: unknown;
       switch (action) {
         case "h_search": {
+          const domain = validateDomain(body.domain);
           const url = `${HARMONIC_BASE}/companies?website_domain=${encodeURIComponent(domain)}`;
           const res = await fetch(url, {
             method: "POST",
             headers: harmonicHeaders(apiKey),
           });
-          const body = await res.text();
-          if (!res.ok) throw new Error(`Harmonic search failed [${res.status}]: ${body}`);
-          // The response is the company object directly
-          data = { results: [JSON.parse(body)] };
+          const responseBody = await res.text();
+          if (!res.ok) {
+            console.error(`Harmonic search error [${res.status}]: ${responseBody}`);
+            throw new Error("Search request failed");
+          }
+          data = { results: [JSON.parse(responseBody)] };
           break;
         }
         case "h_company": {
+          const harmonicId = validateString(body.harmonicId, "harmonicId", 100);
           data = await fetchJSON(
-            `${HARMONIC_BASE}/companies/${harmonicId}`,
+            `${HARMONIC_BASE}/companies/${encodeURIComponent(harmonicId)}`,
             harmonicHeaders(apiKey)
           );
-          // Log funding-related keys for debugging
-          const d = data as Record<string, unknown>;
-          const fundingKeys = Object.keys(d).filter(k => k.toLowerCase().includes("fund"));
-          console.log("Harmonic company keys with 'fund':", fundingKeys);
-          console.log("funding_rounds length:", Array.isArray(d.funding_rounds) ? (d.funding_rounds as unknown[]).length : "not array");
-          console.log("funding length:", Array.isArray(d.funding) ? (d.funding as unknown[]).length : "not array");
-          console.log("fundings length:", Array.isArray(d.fundings) ? (d.fundings as unknown[]).length : "not array");
           break;
         }
         default:
-          throw new Error(`Unknown Harmonic action: ${action}`);
+          return errorResponse("Invalid action", 400);
       }
 
       return new Response(JSON.stringify(data), {
@@ -127,13 +170,13 @@ serve(async (req) => {
       });
     }
 
-    throw new Error(`Unknown action: ${action}`);
+    return errorResponse("Invalid action", 400);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("benchmark-proxy error:", msg);
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Return generic error to client
+    const safeMessages = ["Invalid action", "Invalid domain format", "Search request failed", "External API request failed", "Unauthorized"];
+    const clientMsg = safeMessages.includes(msg) ? msg : "An unexpected error occurred";
+    return errorResponse(clientMsg);
   }
 });
