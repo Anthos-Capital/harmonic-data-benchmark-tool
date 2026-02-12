@@ -1,8 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export function getStoredPassword(): string | null {
+  return sessionStorage.getItem("app_password");
+}
+
 async function callProxy(body: Record<string, unknown>) {
+  const password = getStoredPassword();
   const { data, error } = await supabase.functions.invoke("benchmark-proxy", {
     body,
+    headers: password ? { "x-app-password": password } : {},
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
