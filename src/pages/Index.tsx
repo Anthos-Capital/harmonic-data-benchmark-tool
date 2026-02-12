@@ -5,7 +5,7 @@ import CompanyHeader from "@/components/CompanyHeader";
 import ComparisonTable from "@/components/ComparisonTable";
 import type { FundingRound, CompanyMeta, StatusMessage } from "@/lib/types";
 import { extractPBDealType } from "@/lib/dealCodes";
-import { getStoredPassword } from "@/lib/api";
+import { getStoredPassword, verifyPassword } from "@/lib/api";
 import {
   fetchPBCompany,
   fetchPBDeals,
@@ -17,17 +17,26 @@ import {
 
 function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
   const [pw, setPw] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pw.trim()) {
-      sessionStorage.setItem("app_password", pw.trim());
-      setError(false);
+    if (!pw.trim()) {
+      setError("Please enter a password");
+      return;
+    }
+    setVerifying(true);
+    setError(null);
+    sessionStorage.setItem("app_password", pw.trim());
+    const valid = await verifyPassword();
+    if (valid) {
       onUnlock();
     } else {
-      setError(true);
+      sessionStorage.removeItem("app_password");
+      setError("Invalid password");
     }
+    setVerifying(false);
   };
 
   return (
@@ -42,13 +51,15 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
           placeholder="Password"
           className="w-full px-3 py-2 border border-border rounded bg-background text-foreground text-sm"
           autoFocus
+          disabled={verifying}
         />
-        {error && <p className="text-xs text-destructive">Please enter a password</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
         <button
           type="submit"
-          className="w-full px-3 py-2 bg-primary text-primary-foreground rounded text-sm font-medium"
+          disabled={verifying}
+          className="w-full px-3 py-2 bg-primary text-primary-foreground rounded text-sm font-medium disabled:opacity-50"
         >
-          Unlock
+          {verifying ? "Verifying…" : "Unlock"}
         </button>
       </form>
     </div>

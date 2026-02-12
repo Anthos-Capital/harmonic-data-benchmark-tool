@@ -1,17 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-app-password, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://id-preview--4967f975-a7e5-42ef-86f5-e6da4974a743.lovable.app",
+  "http://localhost:5173",
+  "http://localhost:8080",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-app-password, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 const PB_BASE = "https://api.pitchbook.com";
 const HARMONIC_BASE = "https://api.harmonic.ai";
 
 const VALID_ACTIONS = new Set([
   "pb_company", "pb_deals", "pb_deal_details", "pb_credits",
-  "h_search", "h_company",
+  "h_search", "h_company", "verify_password",
 ]);
 
 function validateString(val: unknown, name: string, maxLen = 500): string {
@@ -54,14 +64,16 @@ async function fetchJSON(url: string, headers: Record<string, string>) {
   return JSON.parse(body);
 }
 
-function errorResponse(msg: string, status = 500) {
-  return new Response(JSON.stringify({ error: msg }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  function errorResponse(msg: string, status = 500) {
+    return new Response(JSON.stringify({ error: msg }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -79,6 +91,13 @@ serve(async (req) => {
     const action = validateString(body.action, "action", 50);
     if (!VALID_ACTIONS.has(action)) {
       return errorResponse("Invalid action", 400);
+    }
+
+    // Password verification endpoint
+    if (action === "verify_password") {
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const useSandbox = body.useSandbox === true;
@@ -162,7 +181,6 @@ serve(async (req) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("benchmark-proxy error:", msg);
-    // Return generic error to client
     const safeMessages = ["Invalid action", "Invalid domain format", "Search request failed", "External API request failed", "Unauthorized"];
     const clientMsg = safeMessages.includes(msg) ? msg : "An unexpected error occurred";
     return errorResponse(clientMsg);
