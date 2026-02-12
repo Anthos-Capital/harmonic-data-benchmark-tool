@@ -66,13 +66,27 @@ supabase secrets set HARMONIC_API_KEY="<your-harmonic-api-key>"
 | `PITCHBOOK_API_KEY_SANDBOX` | Optional | PitchBook sandbox API key for testing (uses sandbox data, no credit cost). |
 | `HARMONIC_API_KEY` | ✅ | Harmonic API key. Obtain from [harmonic.ai](https://harmonic.ai). |
 
-### 5. Deploy the edge function
+### 5. Update CORS origins
+
+Open `supabase/functions/benchmark-proxy/index.ts` and replace the `ALLOWED_ORIGINS` array with your own deployment domain(s):
+
+```ts
+const ALLOWED_ORIGINS = [
+  "https://your-app-domain.com",   // your production/preview URL
+  "http://localhost:5173",          // local dev
+  "http://localhost:8080",          // alternative local dev port
+];
+```
+
+### 6. Deploy the edge function
 
 ```sh
 supabase functions deploy benchmark-proxy
 ```
 
-### 6. Start the dev server
+> **Note:** The function is configured with `verify_jwt = false` in `supabase/config.toml` so it can use the custom shared-password auth instead. This is already set in the repo.
+
+### 7. Start the dev server
 
 ```sh
 npm run dev
@@ -85,7 +99,7 @@ The app will be available at `http://localhost:5173`.
 ## Usage
 
 1. Enter the shared password on the login screen.
-2. Enter a PitchBook Company ID (e.g. `149504-14`) in the search bar.
+2. Enter a PitchBook Company ID (e.g. `149504-14`) or paste a full PitchBook profile URL in the search bar.
 3. The tool fetches company info and funding rounds from PitchBook, then automatically looks up the same company on Harmonic by domain.
 4. A side-by-side comparison table shows funding rounds from both sources, grouped by month.
 5. Use the **Copy as Markdown** button to export the table to your clipboard.
