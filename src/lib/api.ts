@@ -38,3 +38,12 @@ export async function searchHarmonicByDomain(domain: string) {
 export async function fetchHarmonicCompany(harmonicId: string) {
   return callProxy({ action: "h_company", harmonicId });
 }
+
+export async function verifyPassword(): Promise<boolean> {
+  try {
+    const result = await callProxy({ action: "verify_password" });
+    return result?.ok === true;
+  } catch {
+    return false;
+  }
+}
