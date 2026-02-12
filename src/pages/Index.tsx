@@ -5,6 +5,7 @@ import CompanyHeader from "@/components/CompanyHeader";
 import ComparisonTable from "@/components/ComparisonTable";
 import type { FundingRound, CompanyMeta, StatusMessage } from "@/lib/types";
 import { extractPBDealType } from "@/lib/dealCodes";
+import { getStoredPassword } from "@/lib/api";
 import {
   fetchPBCompany,
   fetchPBDeals,
@@ -14,7 +15,48 @@ import {
   fetchHarmonicCompany,
 } from "@/lib/api";
 
+function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
+  const [pw, setPw] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pw.trim()) {
+      sessionStorage.setItem("app_password", pw.trim());
+      setError(false);
+      onUnlock();
+    } else {
+      setError(true);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center font-mono">
+      <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-xs">
+        <h1 className="text-xl font-bold text-foreground">Data Benchmark Tool</h1>
+        <p className="text-sm text-muted-foreground">Enter password to continue</p>
+        <input
+          type="password"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          placeholder="Password"
+          className="w-full px-3 py-2 border border-border rounded bg-background text-foreground text-sm"
+          autoFocus
+        />
+        {error && <p className="text-xs text-destructive">Please enter a password</p>}
+        <button
+          type="submit"
+          className="w-full px-3 py-2 bg-primary text-primary-foreground rounded text-sm font-medium"
+        >
+          Unlock
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function Index() {
+  const [authed, setAuthed] = useState(() => !!getStoredPassword());
   const [steps, setSteps] = useState<StatusMessage[]>([]);
   const [pbMeta, setPbMeta] = useState<CompanyMeta>();
   const [hMeta, setHMeta] = useState<CompanyMeta>();
@@ -25,7 +67,7 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [creditsUsed, setCreditsUsed] = useState<number | null>(null);
 
-  const updateStep = (step: string, status: StatusMessage["status"], detail?: string) =>
+  const updateStep = useCallback((step: string, status: StatusMessage["status"], detail?: string) =>
     setSteps((prev) => {
       const idx = prev.findIndex((s) => s.step === step);
       const updated = { step, status, detail };
@@ -35,7 +77,7 @@ export default function Index() {
         return copy;
       }
       return [...prev, updated];
-    });
+    }), []);
 
   const run = useCallback(async (pbId: string) => {
     const useSandbox = false;
@@ -183,6 +225,10 @@ export default function Index() {
       setLoading(false);
     }
   }, []);
+
+  if (!authed) {
+    return <PasswordGate onUnlock={() => setAuthed(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6 space-y-6 font-mono">
